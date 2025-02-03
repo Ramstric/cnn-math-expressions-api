@@ -1,46 +1,39 @@
+import os
+import inspect
+
 import torch
 from torchvision import transforms
-import os
 from PIL import Image
 from sympy import symbols, lambdify, latex
 from sympy.parsing.sympy_parser import parse_expr
+
 from data.cnn_model import SimpleCNN as MyCNN
-import inspect
 
 
 def predict():
-    # Path to segmented images
-    image_dir = "data/equation_segmented"
 
-    # Create a list of images
+    # Path to segmented images
+    segments_dir = "../data/equation_segmented"
+
+    # List all the segmented images
     images = []
-    for image_name in os.listdir(image_dir):
-        image_path = os.path.join(image_dir, image_name)
+    for image_name in os.listdir(segments_dir):
+        image_path = os.path.join(segments_dir, image_name)
         image = Image.open(image_path).convert('RGB')
         images.append(image)
 
-    # Display the segmented images to classify
-    #plt.figure(figsize=(4, 2), facecolor='#282C34')
-    #for i, image in enumerate(images):
-    #    plt.subplot(1, len(images), i + 1)
-    #    plt.imshow(image)
-    #    plt.axis('off')
-    #plt.show()
-
-
-
-    # Define the transformations
+    # Transformations required by the model
     transform  = transforms.Compose([
         transforms.Resize(size=(180, 180)),
         transforms.ToTensor()
     ])
 
-    # Load the classes
-    classes = torch.load("data/cnn_model/class_names.pth", weights_only=True, map_location=torch.device('cpu'))
+    # Load the classes (loaded onto the CPU)
+    classes = torch.load("../data/cnn_model/class_names.pth", weights_only=True, map_location=torch.device('cpu'))
 
-    # Load the model
+    # Load the model (loaded onto the CPU)
     model = MyCNN.SimpleCNN()
-    model.load_state_dict(torch.load("data/cnn_model/model.pth", weights_only=True, map_location=torch.device('cpu')))
+    model.load_state_dict(torch.load("../data/cnn_model/model.pth", weights_only=True, map_location=torch.device('cpu')))
     model.eval()
 
     # Predict the class of each image
@@ -48,6 +41,7 @@ def predict():
     scores = []
     for image in images:
         image = transform(image).unsqueeze(0)
+
         with torch.no_grad():
             output = model(image)
         _, predicted = torch.max(output, 1)
@@ -67,15 +61,14 @@ def predict():
             eq_characters.insert(i + 1, "*")
 
     equation_str = "".join(eq_characters)
-    #print(f"Equation: {equation_str}")
 
-    equation = parse_expr(equation_str)
+    equation = parse_expr(equation_str)                         # Convert the string to a sympy expression
 
-    latex_equation = latex(equation)
+    latex_equation = latex(equation)                            # LaTeX code for the equation
 
     x, y, z = symbols('x y z')
     equation_lambda = lambdify(x, equation)
 
-    py_function_equation = inspect.getsource(equation_lambda)
+    py_function_equation = inspect.getsource(equation_lambda)   # Python function for the equation
 
     return latex_equation, py_function_equation

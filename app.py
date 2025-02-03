@@ -1,12 +1,10 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-
 import os
 
-from flask import send_from_directory
+from scripts import image_segmentation, cnn_prediction
 
-import image_segmentation
-import cnn_prediction
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+
 app = Flask(__name__)
 CORS(app)
 
@@ -25,14 +23,13 @@ def upload_file():
     for f in os.listdir('data/uploads'):
         os.remove(os.path.join('data/uploads', f))
 
-    # Save the uploaded file (for demonstration purposes)
+    # Save the uploaded file
     file_path = 'data/uploads/' + file.filename
     file.save(file_path)
 
     response = jsonify({'message': 'File uploaded successfully!'})
     response.headers.add('Access-Control-Allow-Origin', '*')
 
-    #segment_image()
     return response
 
 @app.route('/process', methods=['GET'])
@@ -40,23 +37,26 @@ def process_image():
     try:
         image_segmentation.segment_upload()
     finally:
+        # Return the number of segments
         num_segments = len(os.listdir('data/equation_segmented'))
+
         response = jsonify({'message': 'Image processed successfully!', 'num_segments': num_segments})
         response.headers.add('Access-Control-Allow-Origin', '*')
+
         return response
 
 @app.route('/download', methods=['GET'])
 def download_image():
     image_option = request.args.get('image')
 
-    if image_option == 'processed':
-        return send_from_directory('data/equation_processed', 'processed.png')
-    elif image_option == 'contours':
-        return send_from_directory('data/equation_processed', 'contours.png')
-    elif image_option == 'segmented':
-        segment_number = request.args.get('n')
-        return send_from_directory('data/equation_segmented', f'segmented_{segment_number}.png')
-
+    match image_option:
+        case 'processed':
+            return send_from_directory('data/equation_processed', 'processed.png')
+        case 'contours':
+            return send_from_directory('data/equation_processed', 'contours.png')
+        case 'segmented':
+            segment_number = request.args.get('n')
+            return send_from_directory('data/equation_segmented', f'segmented_{segment_number}.png')
 
 @app.route('/predict', methods=['GET'])
 def predict():
@@ -64,6 +64,7 @@ def predict():
 
     response = jsonify({'latex': latex_code, 'python': py_function_code})
     response.headers.add('Access-Control-Allow-Origin', '*')
+
     return response
 
 if __name__ == '__main__':
