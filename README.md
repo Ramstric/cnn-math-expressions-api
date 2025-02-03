@@ -4,7 +4,6 @@ A web application (Project for Sistemas Inteligentes at UPM) that uses a Convolu
 
 ## Table of Contents
 
-- [Usage](#usage)
 - [API Endpoints](#api-endpoints)
 - [Contributing](#contributing)
 - [License](#license)
